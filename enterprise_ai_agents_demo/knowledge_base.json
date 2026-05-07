@@ -1,0 +1,83 @@
+{
+  "service_health": [
+    {
+      "service": "Payments API",
+      "status": "degraded",
+      "region": "phx",
+      "open_incidents": 2,
+      "p95_latency_ms": 810,
+      "owner": "commerce-platform"
+    },
+    {
+      "service": "Order Capture",
+      "status": "healthy",
+      "region": "iad",
+      "open_incidents": 0,
+      "p95_latency_ms": 180,
+      "owner": "commerce-platform"
+    },
+    {
+      "service": "Fraud Scoring",
+      "status": "watch",
+      "region": "phx",
+      "open_incidents": 1,
+      "p95_latency_ms": 420,
+      "owner": "risk-ai"
+    }
+  ],
+  "runbooks": [
+    {
+      "id": "RB-101",
+      "title": "Payments API latency triage",
+      "applies_to": ["Payments API"],
+      "steps": [
+        "Check upstream gateway error rate.",
+        "Compare p95 latency between phx and iad.",
+        "If p95 latency is above 700 ms for 10 minutes, page commerce-platform.",
+        "Open a customer-impact bridge when more than one incident is active."
+      ]
+    },
+    {
+      "id": "RB-202",
+      "title": "Fraud Scoring watch procedure",
+      "applies_to": ["Fraud Scoring"],
+      "steps": [
+        "Check model serving saturation.",
+        "Review feature-store freshness.",
+        "Escalate only when status changes from watch to degraded."
+      ]
+    }
+  ],
+  "policies": [
+    {
+      "id": "POL-7",
+      "name": "Customer escalation policy",
+      "rule": "For tier-1 commerce services, two or more active incidents require a customer-impact bridge and an executive summary."
+    },
+    {
+      "id": "POL-12",
+      "name": "AI generated action policy",
+      "rule": "AI assistants may recommend operational actions, but paging, ticket closure, and customer notifications require human approval."
+    }
+  ],
+  "oncall_contacts": [
+    {
+      "service": "Payments API",
+      "primary": "Ava Patel",
+      "team": "commerce-platform",
+      "channel": "#commerce-platform-sev"
+    },
+    {
+      "service": "Fraud Scoring",
+      "primary": "Nikos Ioannou",
+      "team": "risk-ai",
+      "channel": "#risk-ai-watch"
+    },
+    {
+      "service": "Order Capture",
+      "primary": "Mira Chen",
+      "team": "commerce-platform",
+      "channel": "#order-capture"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+openai>=1.59.0
+httpx>=0.27.0
+oci-genai-auth>=1.0.0
+streamlit>=1.36.0

@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Runtime state and logs
+enterprise_ai_agents_demo/agent_memory.json
+enterprise_ai_agents_demo/agent_demo.log*
+streamlit_demo.pid
+streamlit_demo.out.log*
+*.log
+
+# OS/editor files
+.DS_Store
+*/.DS_Store
+.idea/
+.vscode/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
