@@ -17,6 +17,12 @@ The stable general-chat path is intentionally simple: one Responses call with an
 OCI conversation id. Clear contact/on-call questions route to Function Calling,
 and clear Python/calculation questions route to Code Interpreter.
 
+By default, Function Calling and Code Interpreter requests are isolated from the
+long-lived OCI conversation (`OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION=false`).
+Basic chat remains attached to OCI Conversations for the memory demo. This avoids
+provider-side validation issues that can occur when tool calls replay prior
+conversation messages.
+
 ## Architecture
 
 ```text
@@ -72,6 +78,7 @@ OCI_GENAI_MODEL=openai.gpt-oss-120b
 OCI_GENAI_AUTH=instance_principal
 OCI_AGENT_MAX_RETRIES=1
 OCI_AGENT_ENABLE_LONG_TERM_MEMORY=true
+OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION=false
 ```
 
 Start Streamlit:
@@ -138,6 +145,14 @@ Conversation management in the sidebar:
 Short-term memory:
 
 - Uses the same OCI `conversation=<id>` for each turn in a selected conversation.
+- Applies to the stable basic-chat path by default.
+
+Tool calls:
+
+- Function Calling and Code Interpreter are isolated from the long-lived OCI
+  conversation by default for demo stability.
+- To test attaching tools to OCI Conversations, set
+  `OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION=true`.
 
 Long-term memory:
 

@@ -192,6 +192,11 @@ This demonstrates OCI Function Calling. The model asks for a function call,
 Python executes `get_oncall_contacts`, and the function output is sent back with
 `previous_response_id`.
 
+By default, this tool request is isolated from the long-lived OCI conversation
+for stability. The local Streamlit transcript still records the turn. Set
+`OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION=true` only when explicitly testing tool
+calls attached to OCI Conversations.
+
 ## 7. Code Interpreter Check
 
 Prompt:
@@ -229,6 +234,10 @@ Hello World! The time is 2026-05-07T...
 ```
 
 This demonstrates OCI Code Interpreter with an auto container.
+
+By default, Code Interpreter is isolated from the long-lived OCI conversation for
+stability. This avoids provider-side validation errors observed when tool calls
+replay earlier basic-chat `output_text` messages in the same OCI conversation.
 
 ## 8. Delete Conversation Check
 
@@ -387,12 +396,14 @@ OCI_GENAI_MODEL=openai.gpt-oss-120b
 OCI_GENAI_AUTH=instance_principal
 OCI_AGENT_MAX_RETRIES=1
 OCI_AGENT_ENABLE_LONG_TERM_MEMORY=true
+OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION=false
 ```
 
 Keep these off unless specifically testing them:
 
 ```bash
 OCI_AGENT_ENABLE_SHORT_TERM_COMPACTION=true
+OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION=true
 ```
 
 Keep Streamlit **Stream basic responses** off unless streaming has been verified.

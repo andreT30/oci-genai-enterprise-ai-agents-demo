@@ -928,6 +928,25 @@ def classify_chat_route(question: str) -> str:
     return "basic_chat"
 
 
+def env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def attach_tools_to_conversation() -> bool:
+    """Whether tool-enabled Responses calls should share the OCI conversation.
+
+    OCI Conversations is the stable memory path for basic chat. Some OCI
+    provider/tool combinations can fail when Code Interpreter or Function Calling
+    replays prior conversation output items. Keep tools isolated by default while
+    allowing explicit opt-in for testing.
+    """
+
+    return env_flag("OCI_AGENT_ATTACH_TOOLS_TO_CONVERSATION", default=False)
+
+
 def answer_question(
     question: str,
     config: DemoConfig,
@@ -951,10 +970,21 @@ def answer_question(
     )
     route = classify_chat_route(question)
     LOGGER.info("routing chat turn to %s session_id=%s", route, session_id)
+    attach_tools = attach_tools_to_conversation()
     if route == "function_tool":
-        turn = run_function_tool_turn(responses, conversation_id, question)
+        turn = run_function_tool_turn(
+            responses,
+            conversation_id,
+            question,
+            attach_conversation=attach_tools,
+        )
     elif route == "code_interpreter":
-        turn = run_code_interpreter_turn(responses, conversation_id, question)
+        turn = run_code_interpreter_turn(
+            responses,
+            conversation_id,
+            question,
+            attach_conversation=attach_tools,
+        )
     else:
         turn = run_turn(responses, conversation_id, question)
     store.append_turn(session_id, turn)
@@ -1014,8 +1044,13 @@ def run_function_tool_turn(
     responses: OciResponsesClient | DryRunClient,
     conversation_id: str,
     question: str,
+    attach_conversation: bool = False,
 ) -> dict[str, Any]:
-    LOGGER.info("running function tool turn conversation_id=%s", conversation_id)
+    LOGGER.info(
+        "running function tool turn conversation_id=%s attach_conversation=%s",
+        conversation_id,
+        attach_conversation,
+    )
     if isinstance(responses, DryRunClient):
         contacts = get_oncall_contacts("Payments API")
         answer = (
@@ -1049,15 +1084,23 @@ def run_function_tool_turn(
             ),
         }
 
+    request_kwargs: dict[str, Any] = {}
+    if attach_conversation:
+        request_kwargs["conversation"] = conversation_id
+
     initial = responses.create_response(
-        conversation=conversation_id,
         tools=FUNCTION_TOOL_DEFINITION,
         input=question,
         instructions=(
             "If the user asks for on-call, owner, contact, or escalation channel "
             "information, use get_oncall_contacts. Otherwise answer briefly."
         ),
-        metadata={"source": "enterprise_ai_agents_demo", "phase": "chat_function_tool"},
+        metadata={
+            "source": "enterprise_ai_agents_demo",
+            "phase": "chat_function_tool",
+            "tool_conversation_mode": "attached" if attach_conversation else "isolated",
+        },
+        **request_kwargs,
     )
     tool_outputs = []
     function_calls = extract_function_calls(initial)
@@ -1100,8 +1143,16 @@ def run_function_tool_turn(
             "reason": "Routed through the OCI Function Calling chat path.",
         },
         "plan": {
-            "goal": "Let OCI Responses request a local function call.",
+            "goal": (
+                "Let OCI Responses request a local function call"
+                + (
+                    " attached to the OCI conversation."
+                    if attach_conversation
+                    else " in an isolated tool call."
+                )
+            ),
             "tool_calls": function_calls,
+            "tool_conversation_mode": "attached" if attach_conversation else "isolated",
         },
         "tool_results": tool_outputs,
         "answer": as_agent_answer(
@@ -1117,14 +1168,22 @@ def run_code_interpreter_turn(
     responses: OciResponsesClient | DryRunClient,
     conversation_id: str,
     question: str,
+    attach_conversation: bool = False,
 ) -> dict[str, Any]:
-    LOGGER.info("running code interpreter turn conversation_id=%s", conversation_id)
+    LOGGER.info(
+        "running code interpreter turn conversation_id=%s attach_conversation=%s",
+        conversation_id,
+        attach_conversation,
+    )
     task = build_code_interpreter_task(question)
     if isinstance(responses, DryRunClient):
         answer = dry_run_code_interpreter_answer(task)
     else:
+        request_kwargs: dict[str, Any] = {}
+        if attach_conversation:
+            request_kwargs["conversation"] = conversation_id
+
         response = responses.create_response(
-            conversation=conversation_id,
             tools=[{"type": "code_interpreter", "container": {"type": "auto"}}],
             instructions=(
                 "Use the python tool to execute the requested Python code. "
@@ -1135,7 +1194,9 @@ def run_code_interpreter_turn(
             metadata={
                 "source": "enterprise_ai_agents_demo",
                 "phase": "chat_code_interpreter",
+                "tool_conversation_mode": "attached" if attach_conversation else "isolated",
             },
+            **request_kwargs,
         )
         answer = extract_output_text(response)
 
@@ -1148,8 +1209,16 @@ def run_code_interpreter_turn(
             "reason": "The user asked for a calculation or data-analysis style answer.",
         },
         "plan": {
-            "goal": "Use OCI Code Interpreter to run Python.",
+            "goal": (
+                "Use OCI Code Interpreter to run Python"
+                + (
+                    " attached to the OCI conversation."
+                    if attach_conversation
+                    else " in an isolated tool call."
+                )
+            ),
             "tool_calls": [{"type": "code_interpreter", "container": {"type": "auto"}}],
+            "tool_conversation_mode": "attached" if attach_conversation else "isolated",
         },
         "tool_results": [{"tool_name": "code_interpreter", "results": "OCI-managed python sandbox"}],
         "answer": as_agent_answer(
