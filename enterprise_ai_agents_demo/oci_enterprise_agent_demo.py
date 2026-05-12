@@ -335,7 +335,12 @@ class JsonMemoryStore:
             title="New conversation",
         )
 
-    def append_turn(self, session_id: str, turn: dict[str, Any]) -> None:
+    def append_turn(
+        self,
+        session_id: str,
+        turn: dict[str, Any],
+        trace: dict[str, Any] | None = None,
+    ) -> None:
         data = self.load()
         session = data.setdefault("sessions", {}).setdefault(session_id, {})
         self._migrate_session(session_id, session)
@@ -347,10 +352,18 @@ class JsonMemoryStore:
 
         answer = turn["answer"]
         now = self._now()
+        assistant_message = {
+            "role": "assistant",
+            "content": format_answer(answer),
+            "created_at": now,
+        }
+        if trace is not None:
+            assistant_message["trace"] = trace
+
         messages.extend(
             [
                 {"role": "user", "content": turn["question"], "created_at": now},
-                {"role": "assistant", "content": format_answer(answer), "created_at": now},
+                assistant_message,
             ]
         )
         conversation["updated_at"] = now
@@ -771,6 +784,28 @@ def build_basic_chat_turn(question: str, answer_text: str) -> dict[str, Any]:
     }
 
 
+def build_agent_trace(
+    result: dict[str, Any] | None = None,
+    *,
+    conversation_id: str | None = None,
+    memory_subject_id: str | None = None,
+    turn: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if result is not None:
+        conversation_id = result.get("conversation_id")
+        memory_subject_id = result.get("memory_subject_id")
+        turn = result.get("turn")
+
+    turn = turn or {}
+    return {
+        "conversation_id": conversation_id,
+        "memory_subject_id": memory_subject_id,
+        "intent": turn.get("intent"),
+        "plan": turn.get("plan"),
+        "tool_results": turn.get("tool_results", []),
+    }
+
+
 class BasicChatStream:
     def __init__(
         self,
@@ -820,8 +855,16 @@ class BasicChatStream:
 
         answer_text = "".join(chunks).strip()
         turn = build_basic_chat_turn(self.question, answer_text)
-        store.append_turn(self.session_id, turn)
         conversation_state = store.get_active_conversation(self.session_id)
+        trace = build_agent_trace(
+            conversation_id=conversation_id,
+            memory_subject_id=conversation_state.get(
+                "memory_subject_id",
+                self.session_id,
+            ),
+            turn=turn,
+        )
+        store.append_turn(self.session_id, turn, trace=trace)
         self.result = {
             "conversation_id": conversation_id,
             "conversation_local_id": conversation_state.get("local_id"),
@@ -830,6 +873,7 @@ class BasicChatStream:
                 self.session_id,
             ),
             "turn": turn,
+            "trace": trace,
         }
 
 
@@ -987,13 +1031,19 @@ def answer_question(
         )
     else:
         turn = run_turn(responses, conversation_id, question)
-    store.append_turn(session_id, turn)
     conversation_state = store.get_active_conversation(session_id)
+    trace = build_agent_trace(
+        conversation_id=conversation_id,
+        memory_subject_id=conversation_state.get("memory_subject_id", session_id),
+        turn=turn,
+    )
+    store.append_turn(session_id, turn, trace=trace)
     return {
         "conversation_id": conversation_id,
         "conversation_local_id": conversation_state.get("local_id"),
         "memory_subject_id": conversation_state.get("memory_subject_id", session_id),
         "turn": turn,
+        "trace": trace,
     }
 
 

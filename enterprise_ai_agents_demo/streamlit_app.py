@@ -17,6 +17,7 @@ from enterprise_ai_agents_demo.oci_enterprise_agent_demo import (
     JsonMemoryStore,
     LOGGER,
     answer_question,
+    build_agent_trace,
     classify_chat_route,
     format_answer,
     stream_basic_answer_question,
@@ -138,9 +139,18 @@ st.info(
     "basic conversation diagnostic passes."
 )
 
+def render_agent_trace(trace: dict | None) -> None:
+    if not trace:
+        return
+    with st.expander("Agent trace"):
+        st.json(trace)
+
+
 for message in active.get("messages", []):
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message["role"] == "assistant":
+            render_agent_trace(message.get("trace"))
 
 prompt = st.chat_input("Ask a question, request contacts, or ask for a calculation...")
 if prompt:
@@ -187,17 +197,7 @@ if prompt:
                 st.markdown(format_answer(result["turn"]["answer"]))
 
             if result:
-                turn = result["turn"]
-                with st.expander("Agent trace"):
-                    st.json(
-                        {
-                            "conversation_id": result["conversation_id"],
-                            "memory_subject_id": result["memory_subject_id"],
-                            "intent": turn["intent"],
-                            "plan": turn["plan"],
-                            "tool_results": turn["tool_results"],
-                        }
-                    )
+                render_agent_trace(result.get("trace") or build_agent_trace(result))
     except Exception as exc:
         LOGGER.exception("streamlit chat turn failed session_id=%s", session_id)
         st.error(f"{type(exc).__name__}: {exc}")
