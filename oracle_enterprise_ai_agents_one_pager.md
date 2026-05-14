@@ -14,7 +14,7 @@ It enables organizations to create intelligent agents that can:
 - Interact with structured and unstructured data
 - Maintain conversational context and memory
 
-Oracle positions Enterprise AI Agents as an **enterprise-grade agentic AI platform** with built-in governance, scalability, security, and OCI-native integrations. citeturn0search1turn0search2turn0search8
+Oracle positions Enterprise AI Agents as an **enterprise-grade agentic AI platform** with built-in governance, scalability, security, and OCI-native integrations.
 
 ---
 
@@ -35,7 +35,7 @@ Features include:
 - File search
 - Code interpreter support
 
-This allows developers to reuse existing OpenAI SDK patterns while running workloads securely inside OCI. citeturn0search1turn0search3
+This allows developers to reuse existing OpenAI SDK patterns while running workloads securely inside OCI.
 
 ---
 
@@ -53,7 +53,7 @@ Capabilities include:
 - Enterprise security policies
 - OCI-native scaling
 
-This reduces operational overhead for teams deploying enterprise AI solutions. citeturn0search1turn0search2
+This reduces operational overhead for teams deploying enterprise AI solutions.
 
 ---
 
@@ -77,7 +77,7 @@ Supported data sources include:
 - Files
 - External systems
 
-This improves factual accuracy and reduces hallucinations. citeturn0search0turn0search2
+This improves factual accuracy and reduces hallucinations. 
 
 ---
 
@@ -92,7 +92,7 @@ Agents can invoke tools during execution:
 - MCP tools
 - External APIs
 
-This enables AI agents to move beyond chat into operational workflows and automation. citeturn0search3turn0search6
+This enables AI agents to move beyond chat into operational workflows and automation.
 
 ---
 
@@ -108,7 +108,7 @@ OCI Enterprise AI Agents include enterprise-grade controls:
 - Sovereign AI deployment options
 - Zero data retention endpoints
 
-These features help enterprises deploy AI securely at scale. citeturn0search2turn0search8turn0news16
+These features help enterprises deploy AI securely at scale.
 
 ---
 
